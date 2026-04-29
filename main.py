@@ -16,7 +16,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, LoginManager, login_required, current_user, logout_user
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key_here'  # Change this to a random secret key in production!
+app.config['SECRET_KEY'] = 'Olatunde'  # Change this to a random secret key in production!
 stripe_api_key = os.environ.get('STRIPE_API_KEY')
 print(f"Stripe API Key: {stripe_api_key}")
 if stripe is not None and stripe_api_key:
