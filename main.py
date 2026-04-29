@@ -78,7 +78,7 @@ def login():
         user = Users.query.filter_by(email=request.form["email"]).first()
         if user and check_password_hash(user.password_hash, request.form["password"]):
             login_user(user)
-            return redirect(url_for('home'))
+            return redirect(url_for('home', logged_in=True))
         else:
             return "Invalid email or password!"
     return render_template("login.html")
@@ -91,21 +91,41 @@ def logout():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    error = None
+    form_data = {
+        "first_name": "",
+        "last_name": "",
+        "email": ""
+    }
+
     if request.method == "POST":
-        # Handle registration logic here (e.g., form validation, user creation)
-        if request.form.get("password") != request.form.get("confirm_password"):
-            return "Passwords do not match!"
-        if request.form.get("last_name") and request.form.get("first_name") and request.form.get("email") and request.form.get("password"):
-            hashed_and_salted_password = generate_password_hash(request.form["password"], method='pbkdf2:sha256', salt_length=8)
-            new_user = Users(
-                username=request.form["last_name"] + " " + request.form["first_name"],
-                email=request.form["email"],
-                password_hash=hashed_and_salted_password  # In production, hash the password!
-            )
-            db.session.add(new_user)
-            db.session.commit()
-            return redirect(url_for('home'))
-    return render_template("register.html")
+        form_data["first_name"] = request.form.get("first_name", "").strip()
+        form_data["last_name"] = request.form.get("last_name", "").strip()
+        form_data["email"] = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if password != confirm_password:
+            error = "Passwords do not match!"
+        elif not (form_data["first_name"] and form_data["last_name"] and form_data["email"] and password):
+            error = "All fields are required."
+        else:
+            username = f"{form_data['last_name']} {form_data['first_name']}"
+            if Users.query.filter_by(email=form_data["email"]).first():
+                error = "That email is already registered. Please log in or use another email."
+            else:
+                hashed_and_salted_password = generate_password_hash(password, method='pbkdf2:sha256', salt_length=8)
+                new_user = Users(
+                    username=username,
+                    email=form_data["email"],
+                    password_hash=hashed_and_salted_password
+                )
+                db.session.add(new_user)
+                db.session.commit()
+                login_user(new_user)
+                return redirect(url_for('home', logged_in=True))
+
+    return render_template("register.html", error=error, **form_data)
 
 @app.route("/wishlist")
 @login_required

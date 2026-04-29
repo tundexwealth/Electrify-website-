@@ -39,7 +39,7 @@ class ProductImage(db.Model):
 
 class Users(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(150), unique=True, nullable=False)
+    username = db.Column(db.String(150), unique=False, nullable=False)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     cart_items = db.relationship("CartItem", lazy=True, cascade="all, delete-orphan")

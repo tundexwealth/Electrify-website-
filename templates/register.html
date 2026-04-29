@@ -59,24 +59,29 @@
                     </div>
 
                     <form method="POST" action="/register">
+                        {% if error %}
+                        <div class="alert alert-danger" role="alert">
+                            {{ error }}
+                        </div>
+                        {% endif %}
                         <div class="row g-4">
                             <div class="col-md-6">
                                 <div class="form-floating">
-                                    <input type="text" class="form-control border-0" id="first_name" name="first_name" placeholder="First Name" required>
+                                    <input type="text" class="form-control border-0" id="first_name" name="first_name" placeholder="First Name" value="{{ first_name }}" required>
                                     <label for="first_name">First Name</label>
                                 </div>
                             </div>
 
                             <div class="col-md-6">
                                 <div class="form-floating">
-                                    <input type="text" class="form-control border-0" id="last_name" name="last_name" placeholder="Last Name" required>
+                                    <input type="text" class="form-control border-0" id="last_name" name="last_name" placeholder="Last Name" value="{{ last_name }}" required>
                                     <label for="last_name">Last Name</label>
                                 </div>
                             </div>
 
                             <div class="col-12">
                                 <div class="form-floating">
-                                    <input type="email" class="form-control border-0" id="email" name="email" placeholder="Email Address" required>
+                                    <input type="email" class="form-control border-0" id="email" name="email" placeholder="Email Address" value="{{ email }}" required>
                                     <label for="email">Email Address</label>
                                 </div>
                             </div>
