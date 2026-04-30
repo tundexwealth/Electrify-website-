@@ -6,8 +6,8 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy import or_
 
-dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
-load_dotenv(dotenv_path=dotenv_path, override=True)
+if os.getenv("RENDER") is None:
+    load_dotenv()
 try:
     import stripe
 except ImportError:
@@ -18,7 +18,8 @@ from flask_login import login_user, LoginManager, login_required, current_user, 
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'Olatunde'  # Change this to a random secret key in production!
-stripe_api_key = os.environ.get('STRIPE_API_KEY')
+stripe_api_key = os.getenv("STRIPE_API_KEY")
+print(f"Stripe key exists: {stripe_api_key}")
 if stripe is not None and stripe_api_key:
     stripe.api_key = stripe_api_key
 else:
