@@ -6,7 +6,8 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy import or_
 
-load_dotenv()
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path=dotenv_path, override=True)
 try:
     import stripe
 except ImportError:
@@ -18,7 +19,6 @@ from flask_login import login_user, LoginManager, login_required, current_user, 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'Olatunde'  # Change this to a random secret key in production!
 stripe_api_key = os.environ.get('STRIPE_API_KEY')
-print(f"Stripe API Key: {stripe_api_key}")
 if stripe is not None and stripe_api_key:
     stripe.api_key = stripe_api_key
 else:
@@ -434,10 +434,10 @@ def checkout():
         
         try:
             checkout_session = stripe.checkout.Session.create(
-                payment_method_types=['card'],
                 line_items=line_items,
                 mode='payment',
-                success_url=url_for('order_success', _external=True),
+                payment_method_types=['card'],  # Add this back for older API versions
+                success_url=url_for('order_success', order_ref=order_reference, _external=True),
                 cancel_url=url_for('order_cancel', _external=True),
                 metadata={
                     'user_id': current_user.id,
@@ -446,27 +446,43 @@ def checkout():
                     'shipping_address': f"{order_data['address']}, {order_data['city']}, {order_data['country']}",
                     'customer_name': f"{order_data['first_name']} {order_data['last_name']}",
                     'order_notes': order_data.get('order_notes', '')[:500]  # Limit length
-                },
-                # If you need to access this metadata in customer portal or future charges
-                payment_intent_data={
-                    'metadata': {
-                        'order_reference': order_reference,
-                        'user_id': current_user.id
-                    }
                 }
             )
+            if not checkout_session.url:
+                app.logger.error("Stripe session created but no URL returned")
+                raise Exception("Stripe session has no URL")
             return redirect(checkout_session.url)
+        except stripe.error.CardError as e:
+            app.logger.error(f"Stripe Card Error: {e.user_message}")
+            error_msg = e.user_message
+        except stripe.error.RateLimitError as e:
+            app.logger.error("Stripe Rate Limit Error")
+            error_msg = "Payment service is temporarily unavailable. Please try again in a moment."
+        except stripe.error.InvalidRequestError as e:
+            app.logger.error(f"Stripe Invalid Request: {str(e)}")
+            error_msg = "Invalid payment request. Please check your information and try again."
+        except stripe.error.AuthenticationError as e:
+            app.logger.error(f"Stripe Authentication Error: {str(e)}")
+            error_msg = "Payment service authentication failed. Please contact support."
+        except stripe.error.APIConnectionError as e:
+            app.logger.error(f"Stripe Connection Error: {str(e)}")
+            error_msg = "Unable to connect to payment service. Please try again."
+        except stripe.error.StripeError as e:
+            app.logger.error(f"Stripe Error: {str(e)}")
+            error_msg = "Payment processing failed. Please try again."
         except Exception as e:
-            app.logger.error(f"Stripe error: {str(e)}")
-            return render_template(
-                "checkout.html",
-                cart_items=cart_items,
-                subtotal=subtotal,
-                shipping=shipping,
-                total=subtotal + shipping,
-                logged_in=current_user.is_authenticated,
-                error="Payment processing failed. Please try again."
-            )
+            app.logger.error(f"Unexpected error during checkout: {str(e)}", exc_info=True)
+            error_msg = "An unexpected error occurred. Please try again."
+        
+        return render_template(
+            "checkout.html",
+            cart_items=cart_items,
+            subtotal=subtotal,
+            shipping=shipping,
+            total=subtotal + shipping,
+            logged_in=current_user.is_authenticated,
+            error=error_msg
+        )
         # return render_template(
         #     "checkout.html",
         #     cart_items=cart_items,
